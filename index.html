@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090e18" />
+    <title>标准氨基酸 · 分子结构实验室</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090e18;
+        --panel: rgba(18, 25, 38, .82);
+        --line: rgba(179, 196, 218, .12);
+        --muted: #8290a5;
+        --text: #edf2f8;
+        --mint: #78e2c0;
+        --mono: "DM Mono", monospace;
+        --sans: "DM Sans", "Noto Sans SC", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 38% 46%, rgba(35, 57, 78, .28), transparent 43%),
+          radial-gradient(ellipse at 82% 18%, rgba(33, 72, 81, .11), transparent 36%),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+      }
+      button { font: inherit; }
+      .app { display: flex; flex-direction: column; min-height: 100vh; }
+      .topbar {
+        height: 74px;
+        padding: 0 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        background: rgba(9, 14, 24, .58);
+        z-index: 2;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(120, 226, 192, .36);
+        border-radius: 10px;
+        color: var(--mint);
+        background: rgba(120, 226, 192, .08);
+      }
+      .brand-name { font-size: 13px; font-weight: 600; letter-spacing: .03em; }
+      .brand-caption { margin-top: 2px; color: var(--muted); font: 10px var(--mono); letter-spacing: .1em; }
+      .top-meta { display: flex; align-items: center; gap: 21px; color: #aab5c4; font-size: 11px; }
+      .live { display: flex; align-items: center; gap: 8px; color: #b7c4d2; }
+      .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px rgba(120, 226, 192, .75); }
+      .top-divider { height: 16px; width: 1px; background: var(--line); }
+      .top-code { color: var(--muted); font: 10px var(--mono); }
+
+      main { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 340px; flex: 1; min-height: 0; }
+      .stage { position: relative; min-width: 0; min-height: 560px; overflow: hidden; }
+      #molecule-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+      .stage::before {
+        position: absolute;
+        inset: 0;
+        content: "";
+        pointer-events: none;
+        background-image: linear-gradient(rgba(147, 174, 193, .025) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 174, 193, .025) 1px, transparent 1px);
+        background-size: 54px 54px;
+        mask-image: radial-gradient(ellipse at 48% 49%, #000 8%, transparent 76%);
+      }
+      .stage-heading { position: absolute; top: 38px; left: 44px; pointer-events: none; }
+      .eyebrow { color: var(--mint); font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+      .stage-heading h1 { margin: 11px 0 5px; font-size: clamp(24px, 3vw, 36px); font-weight: 500; letter-spacing: -.04em; }
+      .stage-heading p { margin: 0; color: #8794a7; font-size: 13px; }
+      .stage-footer {
+        position: absolute; bottom: 25px; left: 30px; right: 30px;
+        display: flex; align-items: end; justify-content: space-between; pointer-events: none;
+      }
+      .legend { display: flex; gap: 13px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 15, 25, .65); backdrop-filter: blur(12px); }
+      .legend-item { display: flex; align-items: center; gap: 6px; color: #a6b0bd; font-size: 10px; }
+      .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+      .legend-dot.carbon { background: #687482; }
+      .legend-dot.hydrogen { background: #e7edf4; }
+      .legend-dot.nitrogen { background: #568cf0; }
+      .legend-dot.oxygen { background: #f06b68; }
+      .interaction-hint { color: #738196; font-size: 10px; }
+      .interaction-hint span { color: #a7b3c2; }
+
+      .side-panel { z-index: 1; padding: 28px 23px 20px; border-left: 1px solid var(--line); background: linear-gradient(145deg, rgba(18, 25, 38, .88), rgba(13, 19, 30, .75)); backdrop-filter: blur(18px); overflow-y: auto; }
+      .panel-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+      .panel-label { color: #8895a8; font: 10px var(--mono); letter-spacing: .14em; }
+      .status-chip { padding: 5px 8px; border: 1px solid rgba(120, 226, 192, .2); border-radius: 20px; color: var(--mint); background: rgba(120, 226, 192, .07); font: 9px var(--mono); }
+      .amino-switcher { margin: -8px 0 17px; }
+      .switcher-label { display: flex; justify-content: space-between; margin-bottom: 7px; color: #8290a3; font: 9px var(--mono); letter-spacing: .08em; }
+      .amino-select { width: 100%; padding: 10px 12px; border: 1px solid rgba(120, 226, 192, .2); border-radius: 8px; color: #e8eef4; background: #111a27; font: 11px var(--sans); cursor: pointer; outline: none; }
+      .amino-select:focus { border-color: rgba(120, 226, 192, .62); box-shadow: 0 0 0 3px rgba(120, 226, 192, .08); }
+      .amino-select option { color: #e8eef4; background: #111a27; }
+      .compound-name { margin: 0; font-size: 23px; font-weight: 500; letter-spacing: -.035em; }
+      .compound-subtitle { margin: 7px 0 20px; color: #8794a7; font-size: 11px; }
+      .formula-card { padding: 15px 16px; border: 1px solid rgba(120, 226, 192, .16); border-radius: 12px; background: linear-gradient(120deg, rgba(120, 226, 192, .075), rgba(120, 226, 192, .015)); }
+      .formula-caption { color: #99a8b7; font: 9px var(--mono); letter-spacing: .1em; }
+      .formula { display: flex; align-items: baseline; gap: 2px; margin-top: 7px; color: #f3f7fa; font: 26px var(--mono); letter-spacing: -.06em; }
+      .formula sub { font-size: 13px; }
+      .formula-meta { margin-left: auto; color: #8d9bab; font: 9px var(--mono); letter-spacing: 0; }
+      .section-heading { display: flex; align-items: center; justify-content: space-between; margin: 23px 0 12px; color: #aab6c5; font-size: 11px; font-weight: 600; }
+      .section-heading .index { color: #687589; font: 9px var(--mono); }
+      .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .stat { min-height: 65px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.018); }
+      .stat-label { color: #8190a3; font-size: 9px; }
+      .stat-value { margin-top: 7px; color: #e4eaf0; font: 13px var(--mono); }
+      .stat-value small { color: #7d8b9b; font-size: 9px; }
+      .group-list { display: grid; gap: 7px; }
+      .group-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.016); }
+      .group-left { display: flex; align-items: center; gap: 9px; }
+      .group-icon { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 7px; color: #a7b8cb; background: rgba(139, 165, 190, .1); font: 10px var(--mono); }
+      .group-title { font-size: 10px; color: #d3dae2; }
+      .group-note { margin-top: 2px; color: #79879a; font-size: 9px; }
+      .group-structure { color: #b8c5d2; font: 10px var(--mono); }
+      .atom-card { padding: 12px; border: 1px solid rgba(116, 161, 206, .15); border-radius: 9px; background: rgba(74, 113, 152, .065); }
+      .atom-card-top { display: flex; align-items: center; justify-content: space-between; }
+      .atom-selected { display: flex; align-items: center; gap: 8px; color: #e0e9f2; font: 11px var(--mono); }
+      .atom-selected-dot { width: 9px; height: 9px; border-radius: 50%; background: #687482; box-shadow: 0 0 9px rgba(155, 176, 199, .3); }
+      .atom-coord { color: #8b9bad; font: 9px var(--mono); }
+      .atom-description { margin-top: 8px; color: #8c9aad; font-size: 9px; }
+      .controls { display: flex; gap: 7px; margin-top: 21px; }
+      .control-button {
+        flex: 1; min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 6px;
+        padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; color: #aeb9c6;
+        background: rgba(255,255,255,.025); cursor: pointer; transition: .18s ease; font-size: 9px;
+      }
+      .control-button:hover { border-color: rgba(120, 226, 192, .4); color: var(--text); background: rgba(120, 226, 192, .06); }
+      .control-button.active { border-color: rgba(120, 226, 192, .34); color: var(--mint); background: rgba(120, 226, 192, .08); }
+      .control-button svg { width: 12px; height: 12px; }
+      .atom-note { margin: 13px 0 0; color: #69788b; font-size: 9px; line-height: 1.65; }
+      .bottomline { display: flex; align-items: center; justify-content: space-between; margin-top: 21px; padding-top: 13px; border-top: 1px solid var(--line); color: #657388; font: 8px var(--mono); }
+
+      @media (max-width: 900px) {
+        .topbar { padding: 0 25px; }
+        main { grid-template-columns: minmax(0, 1fr) 300px; }
+        .side-panel { padding-right: 17px; padding-left: 17px; }
+        .stage-heading { left: 28px; }
+      }
+      @media (max-width: 700px) {
+        body { overflow: auto; }
+        .app { min-height: 100dvh; }
+        .topbar { height: 60px; padding: 0 18px; }
+        .top-meta { gap: 11px; }
+        .top-code { display: none; }
+        main { display: flex; flex-direction: column; }
+        .stage { flex: 0 0 57dvh; min-height: 390px; }
+        .stage-heading { top: 25px; left: 20px; }
+        .stage-heading h1 { font-size: 27px; }
+        .stage-footer { bottom: 15px; left: 14px; right: 14px; }
+        .legend { gap: 9px; padding: 8px 9px; }
+        .legend-item { gap: 4px; font-size: 9px; }
+        .interaction-hint { display: none; }
+        .side-panel { border-top: 1px solid var(--line); border-left: 0; overflow: visible; padding: 22px 18px 24px; }
+      }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }
+    </script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.2 14.8 5.6v6.8L9 15.8l-5.8-3.4V5.6L9 2.2Z" stroke="currentColor" stroke-width="1.25"/><circle cx="9" cy="9" r="2" fill="currentColor"/></svg>
+          </div>
+          <div><div class="brand-name">分子结构实验室</div><div class="brand-caption">MOLECULAR ATLAS / 01</div></div>
+        </div>
+        <div class="top-meta"><div class="live"><span class="live-dot"></span>3D 实时模型</div><span class="top-divider"></span><span class="top-code" id="top-code">AMINO ACID · C₉H₁₁NO₂</span></div>
+      </header>
+      <main>
+        <section class="stage" aria-label="可交互的氨基酸三维分子模型" id="molecule-stage">
+          <canvas id="molecule-canvas" aria-label="氨基酸三维分子结构，可拖动旋转"></canvas>
+          <div class="stage-heading">
+            <div class="eyebrow" id="stage-eyebrow">01 / STANDARD AMINO ACID</div>
+            <h1 id="stage-name">苯丙氨酸</h1>
+            <p id="stage-subtitle">Phenylalanine · Phe · F</p>
+          </div>
+          <div class="stage-footer">
+            <div class="legend" aria-label="元素颜色图例">
+              <span class="legend-item"><i class="legend-dot carbon"></i>C</span>
+              <span class="legend-item"><i class="legend-dot hydrogen"></i>H</span>
+              <span class="legend-item"><i class="legend-dot nitrogen"></i>N</span>
+              <span class="legend-item"><i class="legend-dot oxygen"></i>O</span>
+            </div>
+            <div class="interaction-hint"><span>拖动</span> 旋转　·　<span>滚轮</span> 缩放　·　<span>点击</span> 原子详情</div>
+          </div>
+        </section>
+        <aside class="side-panel">
+          <div class="panel-top"><span class="panel-label">MOLECULE PROFILE</span><span class="status-chip" id="stereo-chip">L-构型</span></div>
+          <div class="amino-switcher">
+            <label class="switcher-label" for="amino-acid-select"><span>选择氨基酸</span><span>20 STANDARD</span></label>
+            <select class="amino-select" id="amino-acid-select" aria-label="切换标准氨基酸"></select>
+          </div>
+          <h2 class="compound-name" id="compound-name">L-苯丙氨酸</h2>
+          <p class="compound-subtitle" id="compound-subtitle">L-Phenylalanine · Phe · F</p>
+          <div class="formula-card">
+            <div class="formula-caption">分子式 <span style="float:right">MOLECULAR FORMULA</span></div>
+            <div class="formula" id="formula">C<sub>9</sub>H<sub>11</sub>NO<sub>2</sub><span class="formula-meta">M.W. 165.19</span></div>
+          </div>
+          <div class="section-heading"><span>理化性质</span><span class="index">01 — 04</span></div>
+          <div class="stats-grid">
+            <div class="stat"><div class="stat-label">相对分子质量</div><div class="stat-value" id="mass-value">165.19 <small>g/mol</small></div></div>
+            <div class="stat"><div class="stat-label">等电点 · pI</div><div class="stat-value" id="pi-value">5.48</div></div>
+            <div class="stat"><div class="stat-label">疏水性指数</div><div class="stat-value" id="gravy-value">2.8 <small>GRAVY</small></div></div>
+            <div class="stat"><div class="stat-label">侧链类型</div><div class="stat-value" id="class-value">芳香族</div></div>
+          </div>
+          <div class="section-heading"><span>关键结构基团</span><span class="index">02 — GROUPS</span></div>
+          <div class="group-list">
+            <div class="group-row"><div class="group-left"><span class="group-icon">NH₂</span><div><div class="group-title">α-氨基</div><div class="group-note">碱性 · 可质子化</div></div></div><span class="group-structure">—NH₂</span></div>
+            <div class="group-row"><div class="group-left"><span class="group-icon">COOH</span><div><div class="group-title">α-羧基</div><div class="group-note">酸性 · 可解离</div></div></div><span class="group-structure">—COOH</span></div>
+            <div class="group-row"><div class="group-left"><span class="group-icon" id="sidechain-icon">⌬</span><div><div class="group-title" id="sidechain-title">苯基侧链</div><div class="group-note" id="sidechain-note">疏水 · 苄基结构</div></div></div><span class="group-structure" id="sidechain-formula">—CH₂—Ph</span></div>
+          </div>
+          <div class="section-heading"><span>原子检查器</span><span class="index">03 — INSPECT</span></div>
+          <div class="atom-card">
+            <div class="atom-card-top"><div class="atom-selected"><span class="atom-selected-dot" id="selected-dot"></span><span id="selected-name">选择一个原子</span></div><span class="atom-coord" id="selected-coord">X — · Y — · Z —</span></div>
+            <div class="atom-description" id="selected-description">点击模型中的任意原子，查看元素与结构位置。</div>
+          </div>
+          <div class="controls">
+            <button class="control-button active" id="rotate-button" type="button" aria-pressed="true" title="切换自动旋转">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.2 6.1A5.5 5.5 0 0 0 3.8 4.2L2.5 5.5M2.5 5.5V2.8M2.5 5.5h2.7M2.8 9.9a5.5 5.5 0 0 0 9.4 1.9l1.3-1.3m0 0v2.7m0-2.7h-2.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>自动旋转
+            </button>
+            <button class="control-button active" id="labels-button" type="button" aria-pressed="true" title="显示或隐藏原子标签">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 3.3h11M2.5 8h7.2M2.5 12.7h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="11.5" r="2" stroke="currentColor" stroke-width="1.2"/></svg>原子标签
+            </button>
+            <button class="control-button active" id="hydrogen-button" type="button" aria-pressed="true" title="显示或隐藏氢原子">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="5" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M7.2 8h1.6" stroke="currentColor" stroke-width="1.2"/></svg>氢原子
+            </button>
+            <button class="control-button" id="reset-button" type="button" title="重置视角">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 5.5A5.5 5.5 0 1 1 2.5 9M3 2.8v2.7h2.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>重置
+            </button>
+          </div>
+          <p class="atom-note" id="atom-note">苯丙氨酸是人体必需氨基酸之一，需从膳食中获取。其苯环侧链使其具有芳香族与疏水性特征。</p>
+          <div class="bottomline"><span>STRUCTURE VIEWER · 3D</span><span id="atom-count">ATOM COUNT 23</span></div>
+        </aside>
+      </main>
+    </div>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const canvas = document.querySelector("#molecule-canvas");
+      const stage = document.querySelector(".stage");
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+      camera.position.set(8.7, -3.2, 11.6);
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+
+      const controls = new OrbitControls(camera, canvas);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.055;
+      controls.enablePan = false;
+      controls.minDistance = 7;
+      controls.maxDistance = 19;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.55;
+
+      scene.add(new THREE.HemisphereLight(0xb9d4ed, 0x18202d, 2.1));
+      const keyLight = new THREE.DirectionalLight(0xfff3df, 3.3);
+      keyLight.position.set(5, 7, 9);
+      scene.add(keyLight);
+      const fillLight = new THREE.PointLight(0x5ba9ff, 16, 24);
+      fillLight.position.set(-6, -2, 5);
+      scene.add(fillLight);
+      const rimLight = new THREE.PointLight(0x74e7c4, 12, 22);
+      rimLight.position.set(3, -7, -5);
+      scene.add(rimLight);
+
+      const molecule = new THREE.Group();
+      scene.add(molecule);
+      const atomData = [];
+      const atomMeshes = [];
+      const bondMeshes = [];
+      const atomColors = { C: 0x758391, H: 0xe7edf3, N: 0x528bf1, O: 0xf16d68 };
+      const atomNames = { C: "碳原子", H: "氢原子", N: "氮原子", O: "氧原子" };
+      const atomRadii = { C: 0.27, H: 0.17, N: 0.29, O: 0.29 };
+      const atomMaterials = Object.fromEntries(Object.entries(atomColors).map(([element, color]) => [
+        element,
+        new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, metalness: 0.08, clearcoat: 0.52, clearcoatRoughness: 0.22 })
+      ]));
+      const bondMaterial = new THREE.MeshStandardMaterial({ color: 0x9caab7, roughness: 0.38, metalness: 0.24 });
+      const atomGeometry = new THREE.SphereGeometry(1, 32, 24);
+      const bondGeometry = new THREE.CylinderGeometry(0.065, 0.065, 1, 12, 1, false);
+      const bondRadius = 0.044;
+      const doubleBondGeometry = new THREE.CylinderGeometry(bondRadius, bondRadius, 1, 10, 1, false);
+      const scratch = new THREE.Vector3();
+      const yAxis = new THREE.Vector3(0, 1, 0);
+
+      function addAtom(id, element, position, part, isHydrogen = false) {
+        const atom = { id, element, position: new THREE.Vector3(...position), part, isHydrogen };
+        atomData.push(atom);
+        const mesh = new THREE.Mesh(atomGeometry, atomMaterials[element]);
+        mesh.position.copy(atom.position);
+        mesh.scale.setScalar(atomRadii[element]);
+        mesh.userData.atom = atom;
+        molecule.add(mesh);
+        atomMeshes.push(mesh);
+        atom.mesh = mesh;
+        if (element !== "H") {
+          atom.label = makeLabel(element, atomMaterials[element].color);
+          atom.label.position.copy(atom.position).add(new THREE.Vector3(0, atomRadii[element] + 0.14, 0));
+          molecule.add(atom.label);
+        }
+        return atom;
+      }
+
+      function makeLabel(text, color) {
+        const labelCanvas = document.createElement("canvas");
+        labelCanvas.width = 96;
+        labelCanvas.height = 64;
+        const context = labelCanvas.getContext("2d");
+        context.fillStyle = `#${color.getHexString()}`;
+        context.font = "600 34px 'DM Sans', sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.shadowColor = "rgba(0, 0, 0, .8)";
+        context.shadowBlur = 7;
+        context.fillText(text, 48, 32);
+        const texture = new THREE.CanvasTexture(labelCanvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
+        sprite.scale.set(0.48, 0.32, 1);
+        sprite.renderOrder = 2;
+        sprite.userData.isAtomLabel = true;
+        return sprite;
+      }
+
+      function addBond(atomA, atomB, { order = 1, offset = null } = {}) {
+        const direction = scratch.subVectors(atomB.position, atomA.position);
+        const length = direction.length();
+        const center = new THREE.Vector3().addVectors(atomA.position, atomB.position).multiplyScalar(0.5);
+        const group = new THREE.Group();
+        const main = new THREE.Mesh(bondGeometry, bondMaterial);
+        main.position.copy(center);
+        main.quaternion.setFromUnitVectors(yAxis, direction.normalize());
+        main.scale.y = length * 0.88;
+        group.add(main);
+        if (order === 2) {
+          const second = new THREE.Mesh(doubleBondGeometry, bondMaterial);
+          second.position.copy(center).add(offset || new THREE.Vector3(0, 0, 0.1));
+          second.quaternion.copy(main.quaternion);
+          second.scale.y = length * 0.88;
+          group.add(second);
+        }
+        group.userData.atoms = [atomA, atomB];
+        molecule.add(group);
+        bondMeshes.push(group);
+      }
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let pointerDown = null;
+      const descriptions = {
+        "α-氨基": "α-氨基可接受质子；在生理 pH 下通常以 —NH₃⁺ 形式存在。",
+        "α-碳": "手性中心连接氨基、羧基、氢原子与苄基侧链。",
+        "羧基": "羧基包含一个羰基氧与一个羟基氧，是氨基酸的酸性端。",
+        "羰基氧": "羰基氧与羧基碳形成双键。",
+        "羟基氧": "羟基氧与羧基碳和氢原子相连。",
+        "苄位亚甲基": "侧链中的 —CH₂— 将 α-碳与苯环相连。",
+        "苯环连接位": "苯环上连接苄位亚甲基的芳香碳。",
+        "芳香环碳": "苯环碳参与离域 π 键，构成平面芳香环。",
+        "芳香环氢": "与苯环碳相连的芳香氢原子。",
+        "氨基氢": "构成氨基末端的氢原子。",
+        "羟基氢": "羧基羟基上的氢原子。",
+        "苄位亚甲基氢": "苄位 —CH₂— 上的氢原子。",
+        "α-碳上的氢": "连接在 α-碳手性中心上的氢原子。"
+      };
+
+      const aminoAcids = [
+        { code: "A", three: "Ala", name: "丙氨酸", en: "Alanine", formula: "C3H7NO2", mass: "89.09", pi: "6.00", gravy: "1.8", category: "非极性脂肪族", smiles: "C", rIcon: "CH₃", rTitle: "甲基侧链", rNote: "小型 · 非极性", rText: "—CH₃", note: "丙氨酸是常见的非必需氨基酸，带有简单的甲基侧链。" },
+        { code: "R", three: "Arg", name: "精氨酸", en: "Arginine", formula: "C6H14N4O2", mass: "174.20", pi: "10.76", gravy: "−4.5", category: "碱性 · 带正电", smiles: "CCCNC(=N)N", rIcon: "NH₂", rTitle: "胍基侧链", rNote: "强碱性 · 易质子化", rText: "—(CH₂)₃—NH—C(=NH)—NH₂", note: "精氨酸的胍基在生理条件下易带正电，是蛋白质中的碱性氨基酸。" },
+        { code: "N", three: "Asn", name: "天冬酰胺", en: "Asparagine", formula: "C4H8N2O3", mass: "132.12", pi: "5.41", gravy: "−3.5", category: "极性 · 不带电", smiles: "CC(=O)N", rIcon: "CONH₂", rTitle: "酰胺侧链", rNote: "极性 · 可形成氢键", rText: "—CH₂—CONH₂", note: "天冬酰胺含有可形成氢键的酰胺侧链，属于极性不带电氨基酸。" },
+        { code: "D", three: "Asp", name: "天冬氨酸", en: "Aspartic acid", formula: "C4H7NO4", mass: "133.10", pi: "2.77", gravy: "−3.5", category: "酸性 · 带负电", smiles: "CC(=O)O", rIcon: "COOH", rTitle: "羧基侧链", rNote: "酸性 · 生理条件下带负电", rText: "—CH₂—COOH", note: "天冬氨酸的侧链羧基可解离，在生理条件下通常带负电。" },
+        { code: "C", three: "Cys", name: "半胱氨酸", en: "Cysteine", formula: "C3H7NO2S", mass: "121.16", pi: "5.07", gravy: "2.5", category: "极性 · 含硫", smiles: "CS", rIcon: "SH", rTitle: "巯基侧链", rNote: "含硫 · 可形成二硫键", rText: "—CH₂—SH", note: "半胱氨酸的巯基能够氧化形成二硫键，参与稳定蛋白质结构。" },
+        { code: "Q", three: "Gln", name: "谷氨酰胺", en: "Glutamine", formula: "C5H10N2O3", mass: "146.15", pi: "5.65", gravy: "−3.5", category: "极性 · 不带电", smiles: "CCC(=O)N", rIcon: "CONH₂", rTitle: "酰胺侧链", rNote: "极性 · 可形成氢键", rText: "—(CH₂)₂—CONH₂", note: "谷氨酰胺是含酰胺侧链的极性氨基酸，在氮运输和代谢中发挥作用。" },
+        { code: "E", three: "Glu", name: "谷氨酸", en: "Glutamic acid", formula: "C5H9NO4", mass: "147.13", pi: "3.22", gravy: "−3.5", category: "酸性 · 带负电", smiles: "CCC(=O)O", rIcon: "COOH", rTitle: "羧基侧链", rNote: "酸性 · 生理条件下带负电", rText: "—(CH₂)₂—COOH", note: "谷氨酸侧链含羧基，是重要的酸性氨基酸与神经递质。" },
+        { code: "G", three: "Gly", name: "甘氨酸", en: "Glycine", formula: "C2H5NO2", mass: "75.07", pi: "5.97", gravy: "−0.4", category: "非极性 · 最小氨基酸", smiles: "", rIcon: "H", rTitle: "氢侧链", rNote: "结构最简单 · 非手性", rText: "—H", note: "甘氨酸的侧链仅为氢原子，是唯一没有手性中心的标准氨基酸。" },
+        { code: "H", three: "His", name: "组氨酸", en: "Histidine", formula: "C6H9N3O2", mass: "155.15", pi: "7.59", gravy: "−3.2", category: "碱性 · 芳香族", smiles: "CC1=CN=CN1", rIcon: "N", rTitle: "咪唑侧链", rNote: "芳香族 · 可接受或提供质子", rText: "—CH₂—咪唑", note: "组氨酸的咪唑环可在接近生理 pH 时参与质子转移和酶催化。" },
+        { code: "I", three: "Ile", name: "异亮氨酸", en: "Isoleucine", formula: "C6H13NO2", mass: "131.17", pi: "6.02", gravy: "4.5", category: "非极性 · 脂肪族", smiles: "C(C)CC", rIcon: "CH₃", rTitle: "支链烷基", rNote: "疏水 · 支链脂肪族", rText: "—CH(CH₃)—CH₂—CH₃", note: "异亮氨酸是必需的支链氨基酸，侧链含有额外的手性中心。" },
+        { code: "L", three: "Leu", name: "亮氨酸", en: "Leucine", formula: "C6H13NO2", mass: "131.17", pi: "5.98", gravy: "3.8", category: "非极性 · 脂肪族", smiles: "CC(C)C", rIcon: "CH₃", rTitle: "异丁基侧链", rNote: "疏水 · 支链脂肪族", rText: "—CH₂—CH(CH₃)₂", note: "亮氨酸是必需的支链氨基酸，常见于蛋白质的疏水核心。" },
+        { code: "K", three: "Lys", name: "赖氨酸", en: "Lysine", formula: "C6H14N2O2", mass: "146.19", pi: "9.74", gravy: "−3.9", category: "碱性 · 带正电", smiles: "CCCCN", rIcon: "NH₂", rTitle: "氨基侧链", rNote: "碱性 · 生理条件下带正电", rText: "—(CH₂)₄—NH₂", note: "赖氨酸是必需氨基酸，末端氨基在生理条件下通常带正电。" },
+        { code: "M", three: "Met", name: "甲硫氨酸", en: "Methionine", formula: "C5H11NO2S", mass: "149.21", pi: "5.74", gravy: "1.9", category: "非极性 · 含硫", smiles: "CCSC", rIcon: "S", rTitle: "硫醚侧链", rNote: "含硫 · 疏水", rText: "—CH₂—CH₂—S—CH₃", note: "甲硫氨酸是含硫必需氨基酸，也是蛋白质合成常见的起始氨基酸。" },
+        { code: "F", three: "Phe", name: "苯丙氨酸", en: "Phenylalanine", formula: "C9H11NO2", mass: "165.19", pi: "5.48", gravy: "2.8", category: "非极性 · 芳香族", smiles: "CC1=CC=CC=C1", rIcon: "⌬", rTitle: "苯基侧链", rNote: "疏水 · 芳香族结构", rText: "—CH₂—苯基", note: "苯丙氨酸是人体必需氨基酸之一，苯环侧链使其具有芳香族与疏水性特征。" },
+        { code: "P", three: "Pro", name: "脯氨酸", en: "Proline", formula: "C5H9NO2", mass: "115.13", pi: "6.30", gravy: "−1.6", category: "非极性 · 环状", smiles: "PRO", rIcon: "⌒", rTitle: "吡咯烷环", rNote: "环状 · 与骨架氮相连", rText: "—(CH₂)₃—（闭合至 N）", note: "脯氨酸侧链回接骨架氮形成五元环，常影响蛋白质局部构象。" },
+        { code: "S", three: "Ser", name: "丝氨酸", en: "Serine", formula: "C3H7NO3", mass: "105.09", pi: "5.68", gravy: "−0.8", category: "极性 · 不带电", smiles: "CO", rIcon: "OH", rTitle: "羟基侧链", rNote: "极性 · 可参与氢键", rText: "—CH₂—OH", note: "丝氨酸的羟基可形成氢键，也是多种酶活性位点和磷酸化位点的一部分。" },
+        { code: "T", three: "Thr", name: "苏氨酸", en: "Threonine", formula: "C4H9NO3", mass: "119.12", pi: "5.60", gravy: "−0.7", category: "极性 · 不带电", smiles: "C(C)O", rIcon: "OH", rTitle: "羟基侧链", rNote: "极性 · 含侧链手性中心", rText: "—CH(OH)—CH₃", note: "苏氨酸是必需氨基酸，兼具羟基极性与支链结构。" },
+        { code: "W", three: "Trp", name: "色氨酸", en: "Tryptophan", formula: "C11H12N2O2", mass: "204.23", pi: "5.89", gravy: "−0.9", category: "非极性 · 芳香族", smiles: "CC1=CNC2=CC=CC=C12", rIcon: "⌬", rTitle: "吲哚侧链", rNote: "必需 · 稠合芳香环", rText: "—CH₂—吲哚", note: "色氨酸是含吲哚环的必需氨基酸，也是血清素等分子的生物合成前体。" },
+        { code: "Y", three: "Tyr", name: "酪氨酸", en: "Tyrosine", formula: "C9H11NO3", mass: "181.19", pi: "5.66", gravy: "−1.3", category: "极性 · 芳香族", smiles: "CC1=CC=C(O)C=C1", rIcon: "OH", rTitle: "酚羟基侧链", rNote: "芳香族 · 可形成氢键", rText: "—CH₂—对羟基苯基", note: "酪氨酸的酚羟基可参与氢键与磷酸化，是多种信号蛋白的重要位点。" },
+        { code: "V", three: "Val", name: "缬氨酸", en: "Valine", formula: "C5H11NO2", mass: "117.15", pi: "5.96", gravy: "4.2", category: "非极性 · 脂肪族", smiles: "C(C)C", rIcon: "CH₃", rTitle: "异丙基侧链", rNote: "疏水 · 支链脂肪族", rText: "—CH(CH₃)₂", note: "缬氨酸是必需的支链氨基酸，侧链呈疏水性。" }
+      ];
+
+      function parseSidechain(smiles) {
+        const nodes = [];
+        const bonds = [];
+        const branches = [];
+        const rings = new Map();
+        const cycles = [];
+        let current = -1;
+        let pendingOrder = 1;
+        for (let i = 0; i < smiles.length; i++) {
+          const token = smiles[i];
+          if (token === "=") { pendingOrder = 2; continue; }
+          if (token === "#") { pendingOrder = 3; continue; }
+          if (token === "(") { branches.push(current); continue; }
+          if (token === ")") { current = branches.pop(); continue; }
+          if (/\d/.test(token)) {
+            if (rings.has(token)) {
+              const start = rings.get(token);
+              bonds.push({ a: current, b: start.index, order: pendingOrder || start.order });
+              cycles.push(treePath(nodes, start.index, current));
+              rings.delete(token);
+            } else {
+              rings.set(token, { index: current, order: pendingOrder });
+            }
+            pendingOrder = 1;
+            continue;
+          }
+          const element = token.toUpperCase();
+          if (!["C", "N", "O", "S"].includes(element)) throw new Error(`Unsupported side-chain atom: ${token}`);
+          const index = nodes.length;
+          nodes.push({ element, parent: current, children: 0 });
+          if (current >= 0) {
+            bonds.push({ a: current, b: index, order: pendingOrder });
+            nodes[current].children++;
+          }
+          current = index;
+          pendingOrder = 1;
+        }
+        if (branches.length || rings.size) throw new Error(`Invalid side-chain definition: ${smiles}`);
+        return { nodes, bonds, cycles };
+      }
+
+      function treePath(nodes, start, end) {
+        const startAncestors = [];
+        let cursor = start;
+        while (cursor >= 0) { startAncestors.push(cursor); cursor = nodes[cursor].parent; }
+        const endAncestors = [];
+        cursor = end;
+        while (cursor >= 0) { endAncestors.push(cursor); cursor = nodes[cursor].parent; }
+        const common = startAncestors.find(index => endAncestors.includes(index));
+        return [...startAncestors.slice(0, startAncestors.indexOf(common) + 1).reverse(), ...endAncestors.slice(0, endAncestors.indexOf(common))];
+      }
+
+      function layoutSidechain(parsed, alphaPosition) {
+        const positions = [];
+        const incoming = [];
+        const zAxis = new THREE.Vector3(0, 0, 1);
+        for (let i = 0; i < parsed.nodes.length; i++) {
+          const parentIndex = parsed.nodes[i].parent;
+          if (parentIndex < 0) {
+            positions.push(alphaPosition.clone().add(new THREE.Vector3(-0.08, -1.45, -0.18)));
+            incoming.push(positions[i].clone().sub(alphaPosition).normalize());
+            continue;
+          }
+          const parent = parsed.nodes[parentIndex];
+          const sibling = parent.childrenAssigned || 0;
+          parent.childrenAssigned = sibling + 1;
+          const angle = sibling === 0 ? (parentIndex % 2 ? 0.62 : -0.62) : (sibling % 2 ? 2.08 : -2.08);
+          const direction = incoming[parentIndex].clone().applyAxisAngle(zAxis, angle);
+          direction.z += i % 2 ? 0.22 : -0.22;
+          direction.normalize();
+          incoming.push(direction);
+          positions.push(positions[parentIndex].clone().addScaledVector(direction, 1.48));
+        }
+        return positions;
+      }
+
+      function relaxSidechain(nodes, bonds, alpha) {
+        if (!nodes.length) return;
+        const edges = [...bonds, { a: -1, b: 0, order: 1 }];
+        const velocities = nodes.map(() => new THREE.Vector3());
+        const fixed = alpha.position;
+        for (let iteration = 0; iteration < 110; iteration++) {
+          const forces = nodes.map(() => new THREE.Vector3());
+          for (const edge of edges) {
+            const a = edge.a < 0 ? fixed : nodes[edge.a].position;
+            const b = nodes[edge.b].position;
+            const delta = b.clone().sub(a);
+            const distance = Math.max(delta.length(), 0.001);
+            const elementA = edge.a < 0 ? "C" : nodes[edge.a].element;
+            const elementB = nodes[edge.b].element;
+            const target = edge.order === 2 ? 1.34 : elementA === "S" || elementB === "S" ? 1.78 : 1.48;
+            const force = delta.multiplyScalar((distance - target) * 0.10 / distance);
+            if (edge.a >= 0) forces[edge.a].add(force);
+            forces[edge.b].sub(force);
+          }
+          for (let a = 0; a < nodes.length; a++) {
+            for (let b = a + 1; b < nodes.length; b++) {
+              const connected = bonds.some(edge => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a));
+              if (connected) continue;
+              const delta = nodes[b].position.clone().sub(nodes[a].position);
+              const distance = delta.length();
+              if (distance < 1.05 && distance > 0) {
+                delta.multiplyScalar((1.05 - distance) * 0.055 / distance);
+                forces[a].sub(delta);
+                forces[b].add(delta);
+              }
+            }
+          }
+          for (let i = 0; i < nodes.length; i++) {
+            if (i === 0) continue;
+            velocities[i].multiplyScalar(0.52).add(forces[i]);
+            if (velocities[i].length() > 0.075) velocities[i].setLength(0.075);
+            nodes[i].position.add(velocities[i]);
+          }
+        }
+      }
+
+      function addHydrogens(bondRecords) {
+        const heavyAtoms = [...atomData];
+        let hydrogenNumber = 1;
+        const valence = { C: 4, N: 3, O: 2, S: 2 };
+        for (const atom of heavyAtoms) {
+          const attached = bondRecords.filter(bond => bond.a === atom || bond.b === atom);
+          const usedValence = attached.reduce((sum, bond) => sum + bond.order, 0);
+          const hydrogenCount = Math.max(0, Math.round((valence[atom.element] || usedValence) - usedValence));
+          if (!hydrogenCount) continue;
+          const neighborDirections = attached.map(bond => {
+            const other = bond.a === atom ? bond.b : bond.a;
+            return other.position.clone().sub(atom.position).normalize();
+          });
+          const outward = neighborDirections.reduce((sum, direction) => sum.sub(direction), new THREE.Vector3());
+          if (outward.lengthSq() < 0.01) outward.set(0, 0, 1);
+          outward.normalize();
+          const reference = Math.abs(outward.z) < 0.85 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+          const basisA = outward.clone().cross(reference).normalize();
+          const basisB = outward.clone().cross(basisA).normalize();
+          const hydrogenLength = atom.element === "S" ? 1.34 : atom.element === "O" ? 0.98 : atom.element === "N" ? 1.0 : 1.08;
+          for (let i = 0; i < hydrogenCount; i++) {
+            let direction;
+            if (atom.part === "α-碳" && hydrogenCount === 1) {
+              direction = new THREE.Vector3(0.04, 0.39, 0.98).normalize();
+            } else if (neighborDirections.length === 1 && hydrogenCount > 1) {
+              const angle = i * Math.PI * 2 / hydrogenCount;
+              direction = neighborDirections[0].clone().multiplyScalar(-1 / 3)
+                .addScaledVector(basisA, Math.sqrt(8 / 9) * Math.cos(angle))
+                .addScaledVector(basisB, Math.sqrt(8 / 9) * Math.sin(angle))
+                .normalize();
+            } else {
+              const angle = (i - (hydrogenCount - 1) / 2) * 0.72;
+              direction = outward.clone().addScaledVector(basisA, Math.sin(angle) * 0.62).addScaledVector(basisB, Math.cos(angle) * 0.24).normalize();
+            }
+            const hydrogen = addAtom(`H${hydrogenNumber++}`, "H", atom.position.clone().addScaledVector(direction, hydrogenLength).toArray(), `${atom.part}上的氢`, true);
+            bondRecords.push({ a: atom, b: hydrogen, order: 1 });
+            addBond(atom, hydrogen);
+          }
+        }
+      }
+
+      let labelsVisible = true;
+      let hydrogensVisible = true;
+      let currentAminoAcid = aminoAcids.find(aminoAcid => aminoAcid.code === "F");
+
+      function buildAminoAcid(aminoAcid) {
+        molecule.traverse(child => {
+          if (child.isSprite) {
+            child.material.map?.dispose();
+            child.material.dispose();
+          }
+        });
+        molecule.clear();
+        molecule.position.set(0, 0, 0);
+        atomData.length = 0;
+        atomMeshes.length = 0;
+        bondMeshes.length = 0;
+        const bondRecords = [];
+        const connect = (a, b, order = 1, offset = null) => {
+          addBond(a, b, { order, offset });
+          bondRecords.push({ a, b, order });
+        };
+        const n = addAtom("N1", "N", [-1.34, 0.55, 0.14], "α-氨基");
+        const alpha = addAtom("C1", "C", [0, 0, 0], "α-碳");
+        const carboxyl = addAtom("C2", "C", [1.43, 0.59, 0.06], "羧基");
+        const carbonylO = addAtom("O1", "O", [1.37, 1.83, 0.12], "羰基氧");
+        const hydroxylO = addAtom("O2", "O", [2.67, 0.03, -0.02], "羟基氧");
+        connect(n, alpha);
+        connect(alpha, carboxyl);
+        connect(carboxyl, carbonylO, 2);
+        connect(carboxyl, hydroxylO);
+
+        if (aminoAcid.code === "P") {
+          const prolineAtoms = [
+            addAtom("C3", "C", [-0.08, -1.45, -0.18], "脯氨酸环碳"),
+            addAtom("C4", "C", [-1.45, -2.05, 0.1], "脯氨酸环碳"),
+            addAtom("C5", "C", [-2.1, -0.65, -0.14], "脯氨酸环碳")
+          ];
+          connect(alpha, prolineAtoms[0]);
+          connect(prolineAtoms[0], prolineAtoms[1]);
+          connect(prolineAtoms[1], prolineAtoms[2]);
+          connect(prolineAtoms[2], n);
+        } else if (aminoAcid.smiles) {
+          const parsed = parseSidechain(aminoAcid.smiles);
+          const positions = layoutSidechain(parsed, alpha.position);
+          const graphAtoms = parsed.nodes.map((node, index) => ({
+            ...node,
+            position: positions[index],
+            part: node.element === "N" ? "侧链氮" : node.element === "O" ? "侧链氧" : node.element === "S" ? "侧链硫" : "侧链碳"
+          }));
+          relaxSidechain(graphAtoms, parsed.bonds, alpha);
+          const sidechainAtoms = graphAtoms.map((node, index) => addAtom(`R${index + 1}`, node.element, node.position.toArray(), node.part));
+          connect(alpha, sidechainAtoms[0]);
+          for (const bond of parsed.bonds) {
+            const ring = parsed.cycles.find(cycle => cycle.includes(bond.a) && cycle.includes(bond.b));
+            let offset = null;
+            if (ring && bond.order === 2) {
+              const center = ring.reduce((sum, index) => sum.add(graphAtoms[index].position), new THREE.Vector3()).divideScalar(ring.length);
+              const midpoint = graphAtoms[bond.a].position.clone().add(graphAtoms[bond.b].position).multiplyScalar(0.5);
+              offset = center.sub(midpoint).normalize().multiplyScalar(0.105);
+            }
+            connect(sidechainAtoms[bond.a], sidechainAtoms[bond.b], bond.order, offset);
+          }
+        }
+
+        addHydrogens(bondRecords);
+        if (!hydrogensVisible) {
+          atomData.filter(atom => atom.isHydrogen).forEach(atom => { atom.mesh.visible = false; });
+          bondMeshes.forEach(bond => { bond.visible = !bond.userData.atoms.some(atom => atom.isHydrogen); });
+        }
+        molecule.children.filter(child => child.userData.isAtomLabel).forEach(label => { label.visible = labelsVisible; });
+        centerAndFitModel();
+      }
+
+      function centerAndFitModel() {
+        const bounds = new THREE.Box3();
+        atomData.forEach(atom => bounds.expandByPoint(atom.position));
+        const center = bounds.getCenter(new THREE.Vector3());
+        const size = bounds.getSize(new THREE.Vector3());
+        molecule.position.copy(center).negate();
+        controls.target.set(0, 0, 0);
+        const viewFactor = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.min(camera.aspect, 1);
+        const distance = Math.max(11, size.length() / (2 * viewFactor) * 1.12);
+        camera.position.set(distance * 0.55, -distance * 0.2, distance * 0.81);
+        controls.minDistance = Math.max(5, size.length() * 0.32);
+        controls.maxDistance = Math.max(26, distance * 2.5);
+        controls.update();
+        controls.saveState();
+      }
+
+      function updateAminoAcidInfo(aminoAcid) {
+        currentAminoAcid = aminoAcid;
+        const title = aminoAcid.code === "G" ? aminoAcid.name : `L-${aminoAcid.name}`;
+        const formulaHTML = aminoAcid.formula.replace(/([A-Z][a-z]?)(\d*)/g, (_, element, count) => `${element}${count ? `<sub>${count}</sub>` : ""}`);
+        document.title = `${aminoAcid.name} · 分子结构实验室`;
+        document.querySelector("#stage-name").textContent = aminoAcid.name;
+        document.querySelector("#stage-subtitle").textContent = `${aminoAcid.en} · ${aminoAcid.three} · ${aminoAcid.code}`;
+        document.querySelector("#stage-eyebrow").textContent = `${String(aminoAcids.indexOf(aminoAcid) + 1).padStart(2, "0")} / STANDARD AMINO ACID`;
+        document.querySelector("#molecule-stage").setAttribute("aria-label", `可交互的${aminoAcid.name}三维分子模型`);
+        canvas.setAttribute("aria-label", `${aminoAcid.name}三维分子结构，可拖动旋转`);
+        document.querySelector("#compound-name").textContent = title;
+        document.querySelector("#compound-subtitle").textContent = `${aminoAcid.code === "G" ? "" : "L-"}${aminoAcid.en} · ${aminoAcid.three} · ${aminoAcid.code}`;
+        document.querySelector("#stereo-chip").textContent = aminoAcid.code === "G" ? "非手性" : "L-构型";
+        document.querySelector("#formula").innerHTML = `${formulaHTML}<span class="formula-meta">M.W. ${aminoAcid.mass}</span>`;
+        document.querySelector("#top-code").textContent = `AMINO ACID · ${aminoAcid.formula}`;
+        document.querySelector("#mass-value").innerHTML = `${aminoAcid.mass} <small>g/mol</small>`;
+        document.querySelector("#pi-value").textContent = aminoAcid.pi;
+        document.querySelector("#gravy-value").innerHTML = `${aminoAcid.gravy} <small>GRAVY</small>`;
+        document.querySelector("#class-value").textContent = aminoAcid.category;
+        document.querySelector("#sidechain-icon").textContent = aminoAcid.rIcon;
+        document.querySelector("#sidechain-title").textContent = aminoAcid.rTitle;
+        document.querySelector("#sidechain-note").textContent = aminoAcid.rNote;
+        document.querySelector("#sidechain-formula").textContent = aminoAcid.rText;
+        document.querySelector("#atom-note").textContent = aminoAcid.note;
+        document.querySelector("#atom-count").textContent = `ATOM COUNT ${atomData.length}`;
+        document.querySelector("#selected-name").textContent = "选择一个原子";
+        document.querySelector("#selected-coord").textContent = "X — · Y — · Z —";
+        document.querySelector("#selected-description").textContent = "点击模型中的任意原子，查看元素与结构位置。";
+        document.querySelector("#selected-dot").style.background = "#687482";
+      }
+
+      const aminoAcidSelect = document.querySelector("#amino-acid-select");
+      for (const aminoAcid of aminoAcids) {
+        const option = document.createElement("option");
+        option.value = aminoAcid.code;
+        option.textContent = `${aminoAcid.name} · ${aminoAcid.three}`;
+        aminoAcidSelect.append(option);
+      }
+      function switchAminoAcid(aminoAcid) {
+        buildAminoAcid(aminoAcid);
+        updateAminoAcidInfo(aminoAcid);
+        aminoAcidSelect.value = aminoAcid.code;
+      }
+      aminoAcidSelect.addEventListener("change", () => {
+        const aminoAcid = aminoAcids.find(item => item.code === aminoAcidSelect.value);
+        if (aminoAcid) switchAminoAcid(aminoAcid);
+      });
+
+      function selectAtom(atom) {
+        document.querySelector("#selected-name").textContent = `${atom.element} · ${atomNames[atom.element]} · ${atom.id}`;
+        document.querySelector("#selected-coord").textContent = `X ${atom.position.x.toFixed(1)} · Y ${atom.position.y.toFixed(1)} · Z ${atom.position.z.toFixed(1)}`;
+        document.querySelector("#selected-description").textContent = descriptions[atom.part] || `${currentAminoAcid.name}的${atom.part}。`;
+        document.querySelector("#selected-dot").style.background = `#${atomMaterials[atom.element].color.getHexString()}`;
+      }
+
+      canvas.addEventListener("pointerdown", event => { pointerDown = { x: event.clientX, y: event.clientY }; });
+      canvas.addEventListener("pointerup", event => {
+        if (!pointerDown || Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y) > 5) return;
+        const rect = canvas.getBoundingClientRect();
+        pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+        raycaster.setFromCamera(pointer, camera);
+        const hit = raycaster.intersectObjects(atomMeshes, false)[0];
+        if (hit) selectAtom(hit.object.userData.atom);
+      });
+
+      function setButton(button, enabled) {
+        button.classList.toggle("active", enabled);
+        button.setAttribute("aria-pressed", String(enabled));
+      }
+      const rotateButton = document.querySelector("#rotate-button");
+      rotateButton.addEventListener("click", () => {
+        controls.autoRotate = !controls.autoRotate;
+        setButton(rotateButton, controls.autoRotate);
+      });
+      const labelsButton = document.querySelector("#labels-button");
+      labelsButton.addEventListener("click", () => {
+        const visible = labelsButton.getAttribute("aria-pressed") !== "true";
+        labelsVisible = visible;
+        molecule.children.filter(child => child.userData.isAtomLabel).forEach(label => { label.visible = labelsVisible; });
+        setButton(labelsButton, visible);
+      });
+      const hydrogenButton = document.querySelector("#hydrogen-button");
+      hydrogenButton.addEventListener("click", () => {
+        const visible = hydrogenButton.getAttribute("aria-pressed") !== "true";
+        hydrogensVisible = visible;
+        atomData.filter(atom => atom.isHydrogen).forEach(atom => { atom.mesh.visible = visible; });
+        bondMeshes.forEach(bond => {
+          bond.visible = visible || !bond.userData.atoms.some(atom => atom.isHydrogen);
+        });
+        setButton(hydrogenButton, visible);
+      });
+      document.querySelector("#reset-button").addEventListener("click", () => {
+        controls.reset();
+        controls.autoRotate = true;
+        setButton(rotateButton, true);
+      });
+
+      switchAminoAcid(currentAminoAcid);
+
+      function resize() {
+        const width = stage.clientWidth;
+        const height = stage.clientHeight;
+        if (!width || !height) return;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+        if (atomData.length) centerAndFitModel();
+      }
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(stage);
+      resize();
+
+      renderer.setAnimationLoop(() => {
+        controls.update();
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
