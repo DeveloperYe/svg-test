@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090e18" />
+    <title>苯丙氨酸 · 分子结构实验室</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090e18;
+        --panel: rgba(18, 25, 38, .82);
+        --line: rgba(179, 196, 218, .12);
+        --muted: #8290a5;
+        --text: #edf2f8;
+        --mint: #78e2c0;
+        --mono: "DM Mono", monospace;
+        --sans: "DM Sans", "Noto Sans SC", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 38% 46%, rgba(35, 57, 78, .28), transparent 43%),
+          radial-gradient(ellipse at 82% 18%, rgba(33, 72, 81, .11), transparent 36%),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+      }
+      button { font: inherit; }
+      .app { display: flex; flex-direction: column; min-height: 100vh; }
+      .topbar {
+        height: 74px;
+        padding: 0 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        background: rgba(9, 14, 24, .58);
+        z-index: 2;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(120, 226, 192, .36);
+        border-radius: 10px;
+        color: var(--mint);
+        background: rgba(120, 226, 192, .08);
+      }
+      .brand-name { font-size: 13px; font-weight: 600; letter-spacing: .03em; }
+      .brand-caption { margin-top: 2px; color: var(--muted); font: 10px var(--mono); letter-spacing: .1em; }
+      .top-meta { display: flex; align-items: center; gap: 21px; color: #aab5c4; font-size: 11px; }
+      .live { display: flex; align-items: center; gap: 8px; color: #b7c4d2; }
+      .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px rgba(120, 226, 192, .75); }
+      .top-divider { height: 16px; width: 1px; background: var(--line); }
+      .top-code { color: var(--muted); font: 10px var(--mono); }
+
+      main { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 340px; flex: 1; min-height: 0; }
+      .stage { position: relative; min-width: 0; min-height: 560px; overflow: hidden; }
+      #molecule-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+      .stage::before {
+        position: absolute;
+        inset: 0;
+        content: "";
+        pointer-events: none;
+        background-image: linear-gradient(rgba(147, 174, 193, .025) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 174, 193, .025) 1px, transparent 1px);
+        background-size: 54px 54px;
+        mask-image: radial-gradient(ellipse at 48% 49%, #000 8%, transparent 76%);
+      }
+      .stage-heading { position: absolute; top: 38px; left: 44px; pointer-events: none; }
+      .eyebrow { color: var(--mint); font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+      .stage-heading h1 { margin: 11px 0 5px; font-size: clamp(24px, 3vw, 36px); font-weight: 500; letter-spacing: -.04em; }
+      .stage-heading p { margin: 0; color: #8794a7; font-size: 13px; }
+      .stage-footer {
+        position: absolute; bottom: 25px; left: 30px; right: 30px;
+        display: flex; align-items: end; justify-content: space-between; pointer-events: none;
+      }
+      .legend { display: flex; gap: 13px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(10, 15, 25, .65); backdrop-filter: blur(12px); }
+      .legend-item { display: flex; align-items: center; gap: 6px; color: #a6b0bd; font-size: 10px; }
+      .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+      .legend-dot.carbon { background: #687482; }
+      .legend-dot.hydrogen { background: #e7edf4; }
+      .legend-dot.nitrogen { background: #568cf0; }
+      .legend-dot.oxygen { background: #f06b68; }
+      .interaction-hint { color: #738196; font-size: 10px; }
+      .interaction-hint span { color: #a7b3c2; }
+
+      .side-panel { z-index: 1; padding: 28px 23px 20px; border-left: 1px solid var(--line); background: linear-gradient(145deg, rgba(18, 25, 38, .88), rgba(13, 19, 30, .75)); backdrop-filter: blur(18px); overflow-y: auto; }
+      .panel-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+      .panel-label { color: #8895a8; font: 10px var(--mono); letter-spacing: .14em; }
+      .status-chip { padding: 5px 8px; border: 1px solid rgba(120, 226, 192, .2); border-radius: 20px; color: var(--mint); background: rgba(120, 226, 192, .07); font: 9px var(--mono); }
+      .compound-name { margin: 0; font-size: 23px; font-weight: 500; letter-spacing: -.035em; }
+      .compound-subtitle { margin: 7px 0 20px; color: #8794a7; font-size: 11px; }
+      .formula-card { padding: 15px 16px; border: 1px solid rgba(120, 226, 192, .16); border-radius: 12px; background: linear-gradient(120deg, rgba(120, 226, 192, .075), rgba(120, 226, 192, .015)); }
+      .formula-caption { color: #99a8b7; font: 9px var(--mono); letter-spacing: .1em; }
+      .formula { display: flex; align-items: baseline; gap: 2px; margin-top: 7px; color: #f3f7fa; font: 26px var(--mono); letter-spacing: -.06em; }
+      .formula sub { font-size: 13px; }
+      .formula-meta { margin-left: auto; color: #8d9bab; font: 9px var(--mono); letter-spacing: 0; }
+      .section-heading { display: flex; align-items: center; justify-content: space-between; margin: 23px 0 12px; color: #aab6c5; font-size: 11px; font-weight: 600; }
+      .section-heading .index { color: #687589; font: 9px var(--mono); }
+      .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .stat { min-height: 65px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.018); }
+      .stat-label { color: #8190a3; font-size: 9px; }
+      .stat-value { margin-top: 7px; color: #e4eaf0; font: 13px var(--mono); }
+      .stat-value small { color: #7d8b9b; font-size: 9px; }
+      .group-list { display: grid; gap: 7px; }
+      .group-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.016); }
+      .group-left { display: flex; align-items: center; gap: 9px; }
+      .group-icon { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 7px; color: #a7b8cb; background: rgba(139, 165, 190, .1); font: 10px var(--mono); }
+      .group-title { font-size: 10px; color: #d3dae2; }
+      .group-note { margin-top: 2px; color: #79879a; font-size: 9px; }
+      .group-structure { color: #b8c5d2; font: 10px var(--mono); }
+      .atom-card { padding: 12px; border: 1px solid rgba(116, 161, 206, .15); border-radius: 9px; background: rgba(74, 113, 152, .065); }
+      .atom-card-top { display: flex; align-items: center; justify-content: space-between; }
+      .atom-selected { display: flex; align-items: center; gap: 8px; color: #e0e9f2; font: 11px var(--mono); }
+      .atom-selected-dot { width: 9px; height: 9px; border-radius: 50%; background: #687482; box-shadow: 0 0 9px rgba(155, 176, 199, .3); }
+      .atom-coord { color: #8b9bad; font: 9px var(--mono); }
+      .atom-description { margin-top: 8px; color: #8c9aad; font-size: 9px; }
+      .controls { display: flex; gap: 7px; margin-top: 21px; }
+      .control-button {
+        flex: 1; min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 6px;
+        padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; color: #aeb9c6;
+        background: rgba(255,255,255,.025); cursor: pointer; transition: .18s ease; font-size: 9px;
+      }
+      .control-button:hover { border-color: rgba(120, 226, 192, .4); color: var(--text); background: rgba(120, 226, 192, .06); }
+      .control-button.active { border-color: rgba(120, 226, 192, .34); color: var(--mint); background: rgba(120, 226, 192, .08); }
+      .control-button svg { width: 12px; height: 12px; }
+      .atom-note { margin: 13px 0 0; color: #69788b; font-size: 9px; line-height: 1.65; }
+      .bottomline { display: flex; align-items: center; justify-content: space-between; margin-top: 21px; padding-top: 13px; border-top: 1px solid var(--line); color: #657388; font: 8px var(--mono); }
+
+      @media (max-width: 900px) {
+        .topbar { padding: 0 25px; }
+        main { grid-template-columns: minmax(0, 1fr) 300px; }
+        .side-panel { padding-right: 17px; padding-left: 17px; }
+        .stage-heading { left: 28px; }
+      }
+      @media (max-width: 700px) {
+        body { overflow: auto; }
+        .app { min-height: 100dvh; }
+        .topbar { height: 60px; padding: 0 18px; }
+        .top-meta { gap: 11px; }
+        .top-code { display: none; }
+        main { display: flex; flex-direction: column; }
+        .stage { flex: 0 0 57dvh; min-height: 390px; }
+        .stage-heading { top: 25px; left: 20px; }
+        .stage-heading h1 { font-size: 27px; }
+        .stage-footer { bottom: 15px; left: 14px; right: 14px; }
+        .legend { gap: 9px; padding: 8px 9px; }
+        .legend-item { gap: 4px; font-size: 9px; }
+        .interaction-hint { display: none; }
+        .side-panel { border-top: 1px solid var(--line); border-left: 0; overflow: visible; padding: 22px 18px 24px; }
+      }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }
+    </script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.2 14.8 5.6v6.8L9 15.8l-5.8-3.4V5.6L9 2.2Z" stroke="currentColor" stroke-width="1.25"/><circle cx="9" cy="9" r="2" fill="currentColor"/></svg>
+          </div>
+          <div><div class="brand-name">分子结构实验室</div><div class="brand-caption">MOLECULAR ATLAS / 01</div></div>
+        </div>
+        <div class="top-meta"><div class="live"><span class="live-dot"></span>3D 实时模型</div><span class="top-divider"></span><span class="top-code">AMINO ACID · C₉H₁₁NO₂</span></div>
+      </header>
+      <main>
+        <section class="stage" aria-label="可交互的苯丙氨酸三维分子模型">
+          <canvas id="molecule-canvas" aria-label="苯丙氨酸三维分子结构，可拖动旋转"></canvas>
+          <div class="stage-heading">
+            <div class="eyebrow">01 / ESSENTIAL AMINO ACID</div>
+            <h1>苯丙氨酸</h1>
+            <p>Phenylalanine · L-α-amino acid</p>
+          </div>
+          <div class="stage-footer">
+            <div class="legend" aria-label="元素颜色图例">
+              <span class="legend-item"><i class="legend-dot carbon"></i>C</span>
+              <span class="legend-item"><i class="legend-dot hydrogen"></i>H</span>
+              <span class="legend-item"><i class="legend-dot nitrogen"></i>N</span>
+              <span class="legend-item"><i class="legend-dot oxygen"></i>O</span>
+            </div>
+            <div class="interaction-hint"><span>拖动</span> 旋转　·　<span>滚轮</span> 缩放　·　<span>点击</span> 原子详情</div>
+          </div>
+        </section>
+        <aside class="side-panel">
+          <div class="panel-top"><span class="panel-label">MOLECULE PROFILE</span><span class="status-chip">L-构型</span></div>
+          <h2 class="compound-name">L-苯丙氨酸</h2>
+          <p class="compound-subtitle">L-Phenylalanine · Phe · F</p>
+          <div class="formula-card">
+            <div class="formula-caption">分子式 <span style="float:right">MOLECULAR FORMULA</span></div>
+            <div class="formula">C<sub>9</sub>H<sub>11</sub>NO<sub>2</sub><span class="formula-meta">M.W. 165.19</span></div>
+          </div>
+          <div class="section-heading"><span>理化性质</span><span class="index">01 — 04</span></div>
+          <div class="stats-grid">
+            <div class="stat"><div class="stat-label">相对分子质量</div><div class="stat-value">165.19 <small>g/mol</small></div></div>
+            <div class="stat"><div class="stat-label">等电点 · pI</div><div class="stat-value">5.48</div></div>
+            <div class="stat"><div class="stat-label">疏水性指数</div><div class="stat-value">−1.38 <small>GRAVY</small></div></div>
+            <div class="stat"><div class="stat-label">侧链类型</div><div class="stat-value">芳香族</div></div>
+          </div>
+          <div class="section-heading"><span>关键结构基团</span><span class="index">02 — GROUPS</span></div>
+          <div class="group-list">
+            <div class="group-row"><div class="group-left"><span class="group-icon">NH₂</span><div><div class="group-title">α-氨基</div><div class="group-note">碱性 · 可质子化</div></div></div><span class="group-structure">—NH₂</span></div>
+            <div class="group-row"><div class="group-left"><span class="group-icon">COOH</span><div><div class="group-title">α-羧基</div><div class="group-note">酸性 · 可解离</div></div></div><span class="group-structure">—COOH</span></div>
+            <div class="group-row"><div class="group-left"><span class="group-icon">⌬</span><div><div class="group-title">苯基侧链</div><div class="group-note">疏水 · 苄基结构</div></div></div><span class="group-structure">—CH₂—Ph</span></div>
+          </div>
+          <div class="section-heading"><span>原子检查器</span><span class="index">03 — INSPECT</span></div>
+          <div class="atom-card">
+            <div class="atom-card-top"><div class="atom-selected"><span class="atom-selected-dot" id="selected-dot"></span><span id="selected-name">选择一个原子</span></div><span class="atom-coord" id="selected-coord">X — · Y — · Z —</span></div>
+            <div class="atom-description" id="selected-description">点击模型中的任意原子，查看元素与结构位置。</div>
+          </div>
+          <div class="controls">
+            <button class="control-button active" id="rotate-button" type="button" aria-pressed="true" title="切换自动旋转">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.2 6.1A5.5 5.5 0 0 0 3.8 4.2L2.5 5.5M2.5 5.5V2.8M2.5 5.5h2.7M2.8 9.9a5.5 5.5 0 0 0 9.4 1.9l1.3-1.3m0 0v2.7m0-2.7h-2.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>自动旋转
+            </button>
+            <button class="control-button active" id="labels-button" type="button" aria-pressed="true" title="显示或隐藏原子标签">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 3.3h11M2.5 8h7.2M2.5 12.7h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="11.5" r="2" stroke="currentColor" stroke-width="1.2"/></svg>原子标签
+            </button>
+            <button class="control-button active" id="hydrogen-button" type="button" aria-pressed="true" title="显示或隐藏氢原子">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="5" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M7.2 8h1.6" stroke="currentColor" stroke-width="1.2"/></svg>氢原子
+            </button>
+            <button class="control-button" id="reset-button" type="button" title="重置视角">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 5.5A5.5 5.5 0 1 1 2.5 9M3 2.8v2.7h2.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>重置
+            </button>
+          </div>
+          <p class="atom-note">苯丙氨酸是人体必需氨基酸之一，需从膳食中获取。其苯环侧链使其具有芳香族与疏水性特征。</p>
+          <div class="bottomline"><span>STRUCTURE VIEWER · 3D</span><span>ATOM COUNT 23</span></div>
+        </aside>
+      </main>
+    </div>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const canvas = document.querySelector("#molecule-canvas");
+      const stage = document.querySelector(".stage");
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+      camera.position.set(8.7, -3.2, 11.6);
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+
+      const controls = new OrbitControls(camera, canvas);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.055;
+      controls.enablePan = false;
+      controls.minDistance = 7;
+      controls.maxDistance = 19;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.55;
+
+      scene.add(new THREE.HemisphereLight(0xb9d4ed, 0x18202d, 2.1));
+      const keyLight = new THREE.DirectionalLight(0xfff3df, 3.3);
+      keyLight.position.set(5, 7, 9);
+      scene.add(keyLight);
+      const fillLight = new THREE.PointLight(0x5ba9ff, 16, 24);
+      fillLight.position.set(-6, -2, 5);
+      scene.add(fillLight);
+      const rimLight = new THREE.PointLight(0x74e7c4, 12, 22);
+      rimLight.position.set(3, -7, -5);
+      scene.add(rimLight);
+
+      const molecule = new THREE.Group();
+      scene.add(molecule);
+      const atomData = [];
+      const atomMeshes = [];
+      const bondMeshes = [];
+      const atomColors = { C: 0x758391, H: 0xe7edf3, N: 0x528bf1, O: 0xf16d68 };
+      const atomNames = { C: "碳原子", H: "氢原子", N: "氮原子", O: "氧原子" };
+      const atomRadii = { C: 0.27, H: 0.17, N: 0.29, O: 0.29 };
+      const atomMaterials = Object.fromEntries(Object.entries(atomColors).map(([element, color]) => [
+        element,
+        new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, metalness: 0.08, clearcoat: 0.52, clearcoatRoughness: 0.22 })
+      ]));
+      const bondMaterial = new THREE.MeshStandardMaterial({ color: 0x9caab7, roughness: 0.38, metalness: 0.24 });
+      const atomGeometry = new THREE.SphereGeometry(1, 32, 24);
+      const bondGeometry = new THREE.CylinderGeometry(0.065, 0.065, 1, 12, 1, false);
+      const bondRadius = 0.044;
+      const doubleBondGeometry = new THREE.CylinderGeometry(bondRadius, bondRadius, 1, 10, 1, false);
+      const scratch = new THREE.Vector3();
+      const yAxis = new THREE.Vector3(0, 1, 0);
+
+      function addAtom(id, element, position, part, isHydrogen = false) {
+        const atom = { id, element, position: new THREE.Vector3(...position), part, isHydrogen };
+        atomData.push(atom);
+        const mesh = new THREE.Mesh(atomGeometry, atomMaterials[element]);
+        mesh.position.copy(atom.position);
+        mesh.scale.setScalar(atomRadii[element]);
+        mesh.userData.atom = atom;
+        molecule.add(mesh);
+        atomMeshes.push(mesh);
+        atom.mesh = mesh;
+        if (element !== "H") {
+          atom.label = makeLabel(element, atomMaterials[element].color);
+          atom.label.position.copy(atom.position).add(new THREE.Vector3(0, atomRadii[element] + 0.14, 0));
+          molecule.add(atom.label);
+        }
+        return atom;
+      }
+
+      function makeLabel(text, color) {
+        const labelCanvas = document.createElement("canvas");
+        labelCanvas.width = 96;
+        labelCanvas.height = 64;
+        const context = labelCanvas.getContext("2d");
+        context.fillStyle = `#${color.getHexString()}`;
+        context.font = "600 34px 'DM Sans', sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.shadowColor = "rgba(0, 0, 0, .8)";
+        context.shadowBlur = 7;
+        context.fillText(text, 48, 32);
+        const texture = new THREE.CanvasTexture(labelCanvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, sizeAttenuation: true }));
+        sprite.scale.set(0.48, 0.32, 1);
+        sprite.renderOrder = 2;
+        sprite.userData.isAtomLabel = true;
+        return sprite;
+      }
+
+      function addBond(atomA, atomB, { order = 1, offset = null } = {}) {
+        const direction = scratch.subVectors(atomB.position, atomA.position);
+        const length = direction.length();
+        const center = new THREE.Vector3().addVectors(atomA.position, atomB.position).multiplyScalar(0.5);
+        const group = new THREE.Group();
+        const main = new THREE.Mesh(bondGeometry, bondMaterial);
+        main.position.copy(center);
+        main.quaternion.setFromUnitVectors(yAxis, direction.normalize());
+        main.scale.y = length * 0.88;
+        group.add(main);
+        if (order === 2) {
+          const second = new THREE.Mesh(doubleBondGeometry, bondMaterial);
+          second.position.copy(center).add(offset || new THREE.Vector3(0, 0, 0.1));
+          second.quaternion.copy(main.quaternion);
+          second.scale.y = length * 0.88;
+          group.add(second);
+        }
+        group.userData.atoms = [atomA, atomB];
+        molecule.add(group);
+        bondMeshes.push(group);
+      }
+
+      // Backbone: NH2—Cα(H)(CH2—phenyl)—COOH
+      const n = addAtom("N1", "N", [-1.34, 0.55, 0.14], "α-氨基");
+      const alpha = addAtom("C1", "C", [0, 0, 0], "α-碳");
+      const carboxyl = addAtom("C2", "C", [1.43, 0.59, 0.06], "羧基");
+      const carbonylO = addAtom("O1", "O", [1.37, 1.83, 0.12], "羰基氧");
+      const hydroxylO = addAtom("O2", "O", [2.67, 0.03, -0.02], "羟基氧");
+      const sideCH2 = addAtom("C3", "C", [-0.08, -1.45, -0.18], "苄位亚甲基");
+      const alphaH = addAtom("H1", "H", [0.04, 0.39, 0.98], "α-碳上的氢", true);
+      const nH1 = addAtom("H2", "H", [-1.56, 1.39, 0.38], "氨基氢", true);
+      const nH2 = addAtom("H3", "H", [-2.08, 0.15, 0.19], "氨基氢", true);
+      const oH = addAtom("H4", "H", [3.15, 0.56, 0], "羟基氢", true);
+      const ch2H1 = addAtom("H5", "H", [0.78, -1.76, 0.31], "苄位亚甲基氢", true);
+      const ch2H2 = addAtom("H6", "H", [-0.89, -1.81, 0.31], "苄位亚甲基氢", true);
+
+      addBond(n, alpha);
+      addBond(alpha, carboxyl);
+      addBond(carboxyl, carbonylO, { order: 2 });
+      addBond(carboxyl, hydroxylO);
+      addBond(alpha, sideCH2);
+      addBond(alpha, alphaH);
+      addBond(n, nH1);
+      addBond(n, nH2);
+      addBond(hydroxylO, oH);
+      addBond(sideCH2, ch2H1);
+      addBond(sideCH2, ch2H2);
+
+      const ringCenter = new THREE.Vector3(-0.08, -4.25, -0.18);
+      const ringRadius = 1.37;
+      const ringAtoms = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 2 + i * Math.PI / 3;
+        ringAtoms.push(addAtom(`C${i + 4}`, "C", [
+          ringCenter.x + ringRadius * Math.cos(angle),
+          ringCenter.y + ringRadius * Math.sin(angle),
+          ringCenter.z
+        ], i === 0 ? "苯环连接位" : "芳香环碳"));
+      }
+      addBond(sideCH2, ringAtoms[0]);
+      for (let i = 0; i < 6; i++) {
+        const a = ringAtoms[i];
+        const b = ringAtoms[(i + 1) % 6];
+        const midpoint = new THREE.Vector3().addVectors(a.position, b.position).multiplyScalar(0.5);
+        const towardCenter = ringCenter.clone().sub(midpoint).normalize().multiplyScalar(0.105);
+        addBond(a, b, { order: i % 2 === 0 ? 2 : 1, offset: towardCenter });
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const ringCarbon = ringAtoms[i + 1];
+        const hydrogenPosition = ringCarbon.position.clone().sub(ringCenter).normalize().multiplyScalar(0.99).add(ringCarbon.position);
+        const hydrogen = addAtom(`H${i + 7}`, "H", hydrogenPosition.toArray(), "芳香环氢", true);
+        addBond(ringCarbon, hydrogen);
+      }
+
+      // Center the whole atom set in the viewing volume.
+      const bounds = new THREE.Box3();
+      atomData.forEach(atom => bounds.expandByPoint(atom.position));
+      const modelCenter = bounds.getCenter(new THREE.Vector3());
+      molecule.position.sub(modelCenter);
+      controls.target.set(0, 0, 0);
+      controls.saveState();
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let pointerDown = null;
+      const descriptions = {
+        "α-氨基": "α-氨基可接受质子；在生理 pH 下通常以 —NH₃⁺ 形式存在。",
+        "α-碳": "手性中心连接氨基、羧基、氢原子与苄基侧链。",
+        "羧基": "羧基包含一个羰基氧与一个羟基氧，是氨基酸的酸性端。",
+        "羰基氧": "羰基氧与羧基碳形成双键。",
+        "羟基氧": "羟基氧与羧基碳和氢原子相连。",
+        "苄位亚甲基": "侧链中的 —CH₂— 将 α-碳与苯环相连。",
+        "苯环连接位": "苯环上连接苄位亚甲基的芳香碳。",
+        "芳香环碳": "苯环碳参与离域 π 键，构成平面芳香环。",
+        "芳香环氢": "与苯环碳相连的芳香氢原子。",
+        "氨基氢": "构成氨基末端的氢原子。",
+        "羟基氢": "羧基羟基上的氢原子。",
+        "苄位亚甲基氢": "苄位 —CH₂— 上的氢原子。",
+        "α-碳上的氢": "连接在 α-碳手性中心上的氢原子。"
+      };
+
+      function selectAtom(atom) {
+        document.querySelector("#selected-name").textContent = `${atom.element} · ${atomNames[atom.element]} · ${atom.id}`;
+        document.querySelector("#selected-coord").textContent = `X ${atom.position.x.toFixed(1)} · Y ${atom.position.y.toFixed(1)} · Z ${atom.position.z.toFixed(1)}`;
+        document.querySelector("#selected-description").textContent = descriptions[atom.part] || atom.part;
+        document.querySelector("#selected-dot").style.background = `#${atomMaterials[atom.element].color.getHexString()}`;
+      }
+
+      canvas.addEventListener("pointerdown", event => { pointerDown = { x: event.clientX, y: event.clientY }; });
+      canvas.addEventListener("pointerup", event => {
+        if (!pointerDown || Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y) > 5) return;
+        const rect = canvas.getBoundingClientRect();
+        pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+        raycaster.setFromCamera(pointer, camera);
+        const hit = raycaster.intersectObjects(atomMeshes, false)[0];
+        if (hit) selectAtom(hit.object.userData.atom);
+      });
+
+      function setButton(button, enabled) {
+        button.classList.toggle("active", enabled);
+        button.setAttribute("aria-pressed", String(enabled));
+      }
+      const rotateButton = document.querySelector("#rotate-button");
+      rotateButton.addEventListener("click", () => {
+        controls.autoRotate = !controls.autoRotate;
+        setButton(rotateButton, controls.autoRotate);
+      });
+      const labelsButton = document.querySelector("#labels-button");
+      labelsButton.addEventListener("click", () => {
+        const visible = labelsButton.getAttribute("aria-pressed") !== "true";
+        molecule.children.filter(child => child.userData.isAtomLabel).forEach(label => { label.visible = visible; });
+        setButton(labelsButton, visible);
+      });
+      const hydrogenButton = document.querySelector("#hydrogen-button");
+      hydrogenButton.addEventListener("click", () => {
+        const visible = hydrogenButton.getAttribute("aria-pressed") !== "true";
+        atomData.filter(atom => atom.isHydrogen).forEach(atom => { atom.mesh.visible = visible; });
+        bondMeshes.forEach(bond => {
+          bond.visible = visible || !bond.userData.atoms.some(atom => atom.isHydrogen);
+        });
+        setButton(hydrogenButton, visible);
+      });
+      document.querySelector("#reset-button").addEventListener("click", () => {
+        controls.reset();
+        controls.autoRotate = true;
+        setButton(rotateButton, true);
+      });
+
+      function resize() {
+        const width = stage.clientWidth;
+        const height = stage.clientHeight;
+        if (!width || !height) return;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      }
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(stage);
+      resize();
+
+      renderer.setAnimationLoop(() => {
+        controls.update();
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
